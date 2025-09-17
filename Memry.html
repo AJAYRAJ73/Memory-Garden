@@ -1,0 +1,376 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Memory Garden — Save your moments</title>
+<style>
+/* ------------------------- Base / Reset ------------------------- */
+:root{
+--bg:#0b3b2e;
+--sky:#88d6c7;
+--soil:#2d1f14;
+--card:#ffffffee;
+--accent:#ffb86b;
+--muted:#b8c9c2;
+}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0;font-family:Inter,ui-sans-serif,system-ui,Segoe UI,Roboto,'Helvetica Neue',Arial}
+body{
+background: linear-gradient(180deg,var(--sky) 0%, #bfeee0 20%, var(--bg) 80%);
+color:#092118;
+display:flex;flex-direction:column;align-items:center;padding:2rem;
+-webkit-font-smoothing:antialiased;
+}
+
+
+/* ------------------------- Header ------------------------- */
+header{width:100%;max-width:1100px;display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem}
+h1{font-size:1.6rem;margin:0;color:#043b2f}
+.controls{display:flex;gap:.75rem;align-items:center}
+.btn{background:var(--accent);border:0;padding:.6rem .9rem;border-radius:12px;cursor:pointer;font-weight:600}
+.btn.secondary{background:transparent;border:1px solid rgba(0,0,0,.08);}
+
+
+/* ------------------------- Garden Layout ------------------------- */
+main{width:100%;max-width:1100px;display:grid;grid-template-columns:1fr 360px;gap:1rem}
+
+
+/* left: garden area */
+.garden{
+background:linear-gradient(180deg, rgba(255,255,255,0.6), rgba(255,255,255,0.25));
+padding:1.25rem;border-radius:18px;min-height:60vh;position:relative;overflow:auto;
+box-shadow:0 8px 30px rgba(0,0,0,.12);
+display:flex;flex-wrap:wrap;gap:1rem;align-content:flex-start
+}
+
+
+/* soil at bottom */
+.soil{position:absolute;left:0;right:0;bottom:0;height:110px;background:linear-gradient(180deg,var(--soil),#1b1209);border-bottom-left-radius:18px;border-bottom-right-radius:18px}
+
+
+/* Memory card as flower pot */
+.memory{
+width:200px;background:var(--card);padding:1rem;border-radius:12px;position:relative;box-shadow:0 6px 18px rgba(3,15,10,.12);
+display:flex;flex-direction:column;gap:.6rem;
+}
+.memory img{width:100%;height:110px;object-fit:cover;border-radius:8px}
+.mem-title{font-weight:700;font-size:.98rem}
+.mem-text{font-size:.86rem;color:var(--muted);min-height:40px}
+.meta{display:flex;justify-content:space-between;align-items:center;font-size:.75rem;color:#6a816f}
+
+
+.memory .actions{display:flex;gap:.4rem;margin-top:.3rem}
+.icon-btn{border:0;background:transparent;cursor:pointer;padding:.25rem;border-radius:8px}
+.icon-btn:hover{background:rgba(0,0,0,.04)}
+
+
+/* ------------------------- Sidebar ------------------------- */
+aside{background:rgba(255,255,255,0.9);padding:1rem;border-radius:12px;min-height:60vh;box-shadow:0 8px 20px rgba(0,0,0,.08)}
+aside h2{margin:0 0 .5rem 0}
+.form-row{display:flex;flex-direction:column;gap:.35rem;margin-bottom:.6rem}
+input[type=text],textarea{padding:.6rem;border-radius:8px;border:1px solid rgba(5,30,24,.06);width:100%;font-size:.95rem}
+textarea{resize:vertical;min-height:90px}
+
+
+.small{font-size:.85rem;color:#405d53}
+/* search */
+.search{display:flex;gap:.5rem;margin-bottom:.75rem}
+.search input{flex:1}
+
+
+/* responsive */
+@media (max-width:900px){main{grid-template-columns:1fr;}.garden{min-height:50vh}.aside{order:2}}
+
+
+/* ------------------------- Mini decorations (flowers) ------------------------- */
+.flower{
+position:absolute;transform-origin:center center;filter:drop-shadow(0 6px 10px rgba(0,0,0,.12))
+}
+
+
+/* small UI helpers */
+footer{margin-top:1rem;color:#05372666;font-size:.85rem}
+</style>
+</head>
+<body>
+<header>
+<h1>🌱 Memory Garden</h1>
+<div class="controls">
+<button class="btn" id="addMemoryBtn">Add Memory</button>
+<button class="btn secondary" id="exportBtn">Export JSON</button>
+</div>
+</header>
+
+
+<main>
+<section class="garden" id="garden">
+<!-- dynamic memory cards appear here -->
+<div class="soil" aria-hidden="true"></div>
+<!-- decorative flowers (SVG) -->
+<svg class="flower" style="left:8%;bottom:18px;width:60px;" viewBox="0 0 64 64">
+<g>
+<circle cx="32" cy="22" r="8" fill="#ffb86b"/>
+<g fill="#ffdde2">
+<ellipse rx="8" ry="16" cx="32" cy="8" transform="rotate(0 32 8)"/>
+<ellipse rx="8" ry="16" cx="48" cy="22" transform="rotate(90 48 22)"/>
+</g>
+</g>
+</svg>
+</section>
+
+
+<aside>
+<h2>Memory Drawer</h2>
+<div class="small">Save moments — title, image, notes. Memories are stored in your browser (localStorage).</div>
+
+
+<div class="search" style="margin-top:.8rem">
+<input type="text" id="search" placeholder="Search memories by title or text...">
+<button class="btn secondary" id="clearSearch">Clear</button>
+</div>
+
+
+<div style="margin-top:.6rem">
+<div class="form-row">
+<label class="small">Title</label>
+<input id="titleInput" type="text" placeholder="Birthday at the beach">
+</div>
+<div class="form-row">
+<label class="small">Image URL (optional)</label>
+<input id="imageInput" type="text" placeholder="https://...jpg">
+</div>
+<div class="form-row">
+<label class="small">Notes</label>
+<textarea id="notesInput" placeholder="Write a short story about the memory..."></textarea>
+</div>
+<div style="display:flex;gap:.5rem">
+<button class="btn" id="saveBtn">Save Memory</button>
+<button class="btn secondary" id="clearAllBtn">Clear All</button>
+</div>
+</div>
+
+
+<hr style="margin:1rem 0;border:none;border-top:1px solid rgba(0,0,0,.06)">
+<div class="small">Tips: Use meaningful titles, add an image URL, and export for backup.</div>
+</aside>
+</main>
+
+
+<footer>Local only • No servers • Built with ❤️</footer>
+<script>
+const imageInput = document.getElementById('imageInput');
+const notesInput = document.getElementById('notesInput');
+const saveBtn = document.getElementById('saveBtn');
+const clearAllBtn = document.getElementById('clearAllBtn');
+const addMemoryBtn = document.getElementById('addMemoryBtn');
+const exportBtn = document.getElementById('exportBtn');
+const searchInput = document.getElementById('search');
+const clearSearch = document.getElementById('clearSearch');
+
+
+let memories = load();
+
+
+// render on load
+render(memories);
+
+
+// ------------------------- Event listeners -------------------------
+saveBtn.addEventListener('click', () => {
+const t = titleInput.value.trim();
+const img = imageInput.value.trim();
+const txt = notesInput.value.trim();
+if(!t && !txt){
+alert('Please provide at least a title or some notes.');
+return;
+}
+const mem = { id: Date.now().toString(), title: t || 'Untitled', text: txt, image: img || null, created: new Date().toISOString() };
+memories.unshift(mem);
+persist(memories);
+render(memories);
+clearForm();
+});
+
+
+clearAllBtn.addEventListener('click', () => {
+if(!confirm('Clear all memories? This cannot be undone.')) return;
+memories = [];
+persist(memories);
+render(memories);
+});
+
+
+addMemoryBtn.addEventListener('click', () => {
+titleInput.focus();
+// scroll to sidebar on small screens
+if(window.innerWidth < 900) window.scrollTo({top:document.body.scrollHeight,behavior:'smooth'});
+});
+
+
+exportBtn.addEventListener('click', () => {
+const data = JSON.stringify(memories, null, 2);
+const blob = new Blob([data],{type:'application/json'});
+const url = URL.createObjectURL(blob);
+const a = document.createElement('a');
+a.href = url; a.download = 'memory-garden-export.json';
+document.body.appendChild(a); a.click(); a.remove();
+URL.revokeObjectURL(url);
+});
+
+
+searchInput.addEventListener('input', () => {
+const q = searchInput.value.trim().toLowerCase();
+if(!q) return render(memories);
+const filtered = memories.filter(m => (m.title && m.title.toLowerCase().includes(q)) || (m.text && m.text.toLowerCase().includes(q)));
+render(filtered);
+});
+
+
+clearSearch.addEventListener('click', () => { searchInput.value=''; render(memories); searchInput.focus(); });
+
+
+// ------------------------- Persistence -------------------------
+function load(){
+try{
+const raw = localStorage.getItem(LS_KEY);
+if(!raw) return [];
+return JSON.parse(raw);
+}catch(e){ console.error('Failed to read storage',e); return [] }
+}
+function persist(list){
+try{ localStorage.setItem(LS_KEY, JSON.stringify(list)); }catch(e){ console.error(e); }
+}
+
+
+// ------------------------- Render -------------------------
+function render(list){
+// clear existing memory cards except soil and flowers
+const keep = Array.from(garden.children).filter(n => n.classList && n.classList.contains('soil'));
+garden.innerHTML = '';
+keep.forEach(k => garden.appendChild(k));
+
+
+if(!list || list.length === 0){
+const empty = document.createElement('div');
+empty.style.padding='2rem';
+empty.style.width='100%';
+empty.style.textAlign='center';
+empty.innerHTML = '<strong>No memories yet.</strong><div class="small">Use the form to the right (or tap Add Memory) to plant your first memory.</div>';
+garden.insertBefore(empty, garden.querySelector('.soil'));
+return;
+}
+
+
+list.forEach(m => {
+const card = document.createElement('article');
+card.className = 'memory';
+
+
+// image (if any) or placeholder SVG
+if(m.image){
+const img = document.createElement('img');
+img.src = m.image;
+img.alt = m.title;
+img.onerror = () => { img.src = placeholderDataURL(m.title); }
+card.appendChild(img);
+}else{
+const img = document.createElement('div');
+img.innerHTML = placeholderSVG(m.title);
+card.appendChild(img);
+}
+
+
+const title = document.createElement('div');
+title.className='mem-title';
+title.textContent = m.title;
+card.appendChild(title);
+
+
+const text = document.createElement('div');
+text.className='mem-text';
+text.textContent = m.text || '';
+card.appendChild(text);
+
+
+const meta = document.createElement('div');
+meta.className='meta';
+meta.innerHTML = `<span>${new Date(m.created).toLocaleDateString()}</span><span>•</span><span>${m.id.slice(-4)}</span>`;
+card.appendChild(meta);
+const actions = document.createElement('div');
+
+
+// attach handlers
+actions.querySelectorAll('.icon-btn').forEach(btn => {
+btn.addEventListener('click', (e) => {
+const id = e.currentTarget.dataset.id;
+if(e.currentTarget.title === 'Delete') handleDelete(id);
+else handleEdit(id);
+});
+});
+
+
+// add to DOM before soil (so soil stays at bottom)
+garden.insertBefore(card, garden.querySelector('.soil'));
+});
+}
+
+
+function handleDelete(id){
+if(!confirm('Delete this memory?')) return;
+memories = memories.filter(m => m.id !== id);
+persist(memories);
+render(memories);
+}
+
+
+function handleEdit(id){
+const m = memories.find(x => x.id === id);
+if(!m) return;
+// fill form
+titleInput.value = m.title;
+imageInput.value = m.image || '';
+notesInput.value = m.text || '';
+// remove old and save new on next Save click by replacing the item
+memories = memories.filter(x => x.id !== id);
+persist(memories);
+render(memories);
+// focus
+titleInput.focus();
+}
+
+
+function clearForm(){ titleInput.value=''; imageInput.value=''; notesInput.value=''; }
+
+
+// ------------------------- Helpers: placeholder image -------------------------
+function placeholderSVG(text){
+const escaped = escapeHtml((text||'Memory').slice(0,18));
+return `\n <svg width="100%" height="110" viewBox="0 0 300 110" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">\n <rect width="100%" height="100%" fill="#f3f7f5" rx="8" />\n <text x="50%" y="55%" dominant-baseline="middle" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="18" fill="#98b8ad">${escaped}</text>\n </svg>\n `;
+}
+function placeholderDataURL(text){ return 'data:image/svg+xml;utf8,' + encodeURIComponent(placeholderSVG(text)); }
+function escapeHtml(s){ return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":"&#39;"}[c])); }
+
+
+// ------------------------- keyboard shortcuts -------------------------
+window.addEventListener('keydown', (e) => {
+if(e.key === 'n' && (e.ctrlKey || e.metaKey)){
+e.preventDefault(); titleInput.focus();
+}
+if(e.key === 'f' && (e.ctrlKey || e.metaKey)){
+e.preventDefault(); searchInput.focus();
+}
+});
+// ------------------------- init sample data (only first time) -------------------------
+if(memories.length === 0){
+const sample = [{id: 's1', title:'First Bloom', text:'I planted my first rose today.', image:null, created: new Date().toISOString()},
+{id: 's2', title:'Summer Trip', text:'Sunset at the pier with friends.', image:null, created:new Date().toISOString()}];
+memories = sample.concat(memories);
+persist(memories);
+render(memories);
+}
+
+
+</script>
+</body>
+</html>
